@@ -23,6 +23,19 @@ internal sealed class DecorationBuilder<TService>(IServiceCollection services)
         return this;
     }
 
+    public IDecorationBuilder<TService> ThenIf<TDecorator>(bool condition)
+        where TDecorator : class, TService
+    {
+        if (condition)
+        {
+            _decorators.Add(typeof(TDecorator));
+        }
+        return this;
+    }
+
+    public IDecorationBuilder<TService> WithIf<TDecorator>(bool condition)
+        where TDecorator : class, TService => ThenIf<TDecorator>(condition);
+
     public IDecorationBuilder<TService> WithLifetime(ServiceLifetime lifetime)
     {
         _lifetime = lifetime;

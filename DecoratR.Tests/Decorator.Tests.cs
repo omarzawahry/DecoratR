@@ -113,6 +113,123 @@ public class DecoratorTests
     }
 
     [Test]
+    public void ThenIf_WithTrueCondition_AddsDecorator()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .Then<LoggingDecorator>()
+                .ThenIf<RetryDecorator>(true) // Should add RetryDecorator
+                .Then<BaseService>()
+                .Apply();
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>();
+
+        var result = service.Execute();
+
+        Assert.That(result, Is.EqualTo("Log(Retry(Base))"));
+    }
+
+    [Test]
+    public void ThenIf_WithFalseCondition_SkipsDecorator()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .Then<LoggingDecorator>()
+                .ThenIf<RetryDecorator>(false) // Should skip RetryDecorator
+                .Then<BaseService>()
+                .Apply();
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>();
+
+        var result = service.Execute();
+
+        Assert.That(result, Is.EqualTo("Log(Base)"));
+    }
+
+    [Test]
+    public void WithIf_WithTrueCondition_AddsDecorator()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .WithIf<LoggingDecorator>(true) // Should add LoggingDecorator
+                .Then<RetryDecorator>()
+                .Then<BaseService>()
+                .Apply();
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>();
+
+        var result = service.Execute();
+
+        Assert.That(result, Is.EqualTo("Log(Retry(Base))"));
+    }
+
+    [Test]
+    public void WithIf_WithFalseCondition_SkipsDecorator()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .WithIf<LoggingDecorator>(false) // Should skip LoggingDecorator
+                .Then<RetryDecorator>()
+                .Then<BaseService>()
+                .Apply();
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>();
+
+        var result = service.Execute();
+
+        Assert.That(result, Is.EqualTo("Retry(Base)"));
+    }
+
+    [Test]
+    public void ConditionalDecorators_CanBeMixed_WithRegularDecorators()
+    {
+        var services = new ServiceCollection();
+        bool isDevelopment = true;
+        bool isLoggingEnabled = false;
+
+        services.Decorate<IService>()
+                .WithIf<LoggingDecorator>(isLoggingEnabled) // Skip
+                .Then<RetryDecorator>() // Always add
+                .ThenIf<LoggingDecorator>(isDevelopment) // Add because isDevelopment is true
+                .Then<BaseService>()
+                .Apply();
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>();
+
+        var result = service.Execute();
+
+        Assert.That(result, Is.EqualTo("Retry(Log(Base))"));
+    }
+
+    [Test]
+    public void AllConditionalDecorators_WithFalseConditions_OnlyBaseImplementation()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .ThenIf<LoggingDecorator>(false)
+                .ThenIf<RetryDecorator>(false)
+                .Then<BaseService>() // Only this should remain
+                .Apply();
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>();
+
+        var result = service.Execute();
+
+        Assert.That(result, Is.EqualTo("Base"));
+    }
+
+    [Test]
     public void AsSingleton_SetsSingletonLifetime()
     {
         var services = new ServiceCollection();
