@@ -7,11 +7,20 @@ namespace DecoratR;
 /// Internal implementation of <see cref="IDecorationBuilder{TService}"/> that builds decorator chains.
 /// </summary>
 /// <typeparam name="TService">The service type to decorate.</typeparam>
-internal sealed class DecorationBuilder<TService>(IServiceCollection services)
-    : IDecorationBuilder<TService> where TService : class
+internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService> 
+    where TService : class
 {
+    private readonly IServiceCollection _services;
+    private readonly object? _serviceKey;
     private readonly List<Type> _decorators = new();
     private ServiceLifetime _lifetime = ServiceLifetime.Transient;
+
+    // Single constructor with optional serviceKey parameter
+    public DecorationBuilder(IServiceCollection services, object? serviceKey = null)
+    {
+        _services = services;
+        _serviceKey = serviceKey;
+    }
 
     public IDecorationBuilder<TService> With<TDecorator>()
         where TDecorator : class, TService => Then<TDecorator>();
@@ -52,20 +61,57 @@ internal sealed class DecorationBuilder<TService>(IServiceCollection services)
     {
         if (_decorators.Count == 0)
             throw new InvalidOperationException(
-                $"At least one decorator (the base implementation) must be provided for service type {typeof(TService).Name}.");
+                $"At least one decorator (the base implementation) must be provided for service type {typeof(TService).Name}" +
+                (_serviceKey != null ? $" with key '{_serviceKey}'" : "") + ".");
 
         ValidateDecoratorChain();
 
         var baseImplementation = _decorators.Last();
         var wrapperDecorators = _decorators.Take(_decorators.Count - 1).ToList();
 
-        services.RemoveAll(typeof(TService));
+        if (_serviceKey != null)
+        {
+            // Handle keyed services
+            RemoveExistingKeyedService();
+            RegisterKeyedService(wrapperDecorators, baseImplementation);
+        }
+        else
+        {
+            // Handle regular services
+            _services.RemoveAll(typeof(TService));
+            RegisterRegularService(wrapperDecorators, baseImplementation);
+        }
+    }
 
-        services.Add(new ServiceDescriptor(
+    private void RemoveExistingKeyedService()
+    {
+        var existingDescriptors = _services
+            .Where(descriptor => 
+                descriptor.ServiceType == typeof(TService) && 
+                descriptor.ServiceKey?.Equals(_serviceKey) == true)
+            .ToList();
+        
+        foreach (var descriptor in existingDescriptors)
+        {
+            _services.Remove(descriptor);
+        }
+    }
+
+    private void RegisterKeyedService(List<Type> wrapperDecorators, Type baseImplementation)
+    {
+        _services.Add(new ServiceDescriptor(
             typeof(TService),
-            serviceProvider => BuildDecoratorChain(serviceProvider, 
-                                                         wrapperDecorators,
-                                                         baseImplementation),
+            _serviceKey,
+            (serviceProvider, _) => BuildDecoratorChain(serviceProvider, wrapperDecorators, baseImplementation),
+            _lifetime
+        ));
+    }
+
+    private void RegisterRegularService(List<Type> wrapperDecorators, Type baseImplementation)
+    {
+        _services.Add(new ServiceDescriptor(
+            typeof(TService),
+            serviceProvider => BuildDecoratorChain(serviceProvider, wrapperDecorators, baseImplementation),
             _lifetime
         ));
     }
