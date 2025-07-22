@@ -31,6 +31,9 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         _decorators.Add(new DecoratorDescriptor(typeof(TDecorator)));
         return this;
     }
+    
+    public IDecorationBuilder<TService> With(Func<IServiceProvider, TService, TService> factory)
+        => Then(factory);
 
     public IDecorationBuilder<TService> Then(Func<IServiceProvider, TService, TService> factory)
     {
@@ -38,9 +41,9 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         return this;
     }
 
-    public IDecorationBuilder<TService> With(Func<IServiceProvider, TService, TService> factory)
-        => Then(factory);
-
+    public IDecorationBuilder<TService> WithIf<TDecorator>(bool condition)
+        where TDecorator : class, TService => ThenIf<TDecorator>(condition);
+    
     public IDecorationBuilder<TService> ThenIf<TDecorator>(bool condition)
         where TDecorator : class, TService
     {
@@ -50,7 +53,10 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         }
         return this;
     }
-
+    
+    public IDecorationBuilder<TService> WithIf(bool condition, Func<IServiceProvider, TService, TService> factory)
+        => ThenIf(condition, factory);
+    
     public IDecorationBuilder<TService> ThenIf(bool condition, Func<IServiceProvider, TService, TService> factory)
     {
         if (condition)
@@ -59,12 +65,6 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         }
         return this;
     }
-
-    public IDecorationBuilder<TService> WithIf<TDecorator>(bool condition)
-        where TDecorator : class, TService => ThenIf<TDecorator>(condition);
-
-    public IDecorationBuilder<TService> WithIf(bool condition, Func<IServiceProvider, TService, TService> factory)
-        => ThenIf(condition, factory);
 
     public IDecorationBuilder<TService> WithLifetime(ServiceLifetime lifetime)
     {
@@ -172,7 +172,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         {
             object current = baseImplementation.IsTypeDescriptor
                 ? ActivatorUtilities.GetServiceOrCreateInstance(provider, baseImplementation.DecoratorType!)
-                : baseImplementation.Factory!(provider, default(TService)!); // Base implementation factory won't use inner service
+                : baseImplementation.Factory!(provider, default!); // Base implementation factory won't use inner service
 
             foreach (var decorator in Enumerable.Reverse(decorators))
             {
