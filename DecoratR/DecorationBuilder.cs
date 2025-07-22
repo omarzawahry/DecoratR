@@ -12,7 +12,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
 {
     private readonly IServiceCollection _services;
     private readonly object? _serviceKey;
-    private readonly List<Type> _decorators = new();
+    private readonly List<DecoratorDescriptor> _decorators = new();
     private ServiceLifetime _lifetime = ServiceLifetime.Transient;
 
     // Single constructor with optional serviceKey parameter
@@ -28,22 +28,43 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     public IDecorationBuilder<TService> Then<TDecorator>()
         where TDecorator : class, TService
     {
-        _decorators.Add(typeof(TDecorator));
+        _decorators.Add(new DecoratorDescriptor(typeof(TDecorator)));
         return this;
     }
+
+    public IDecorationBuilder<TService> Then(Func<IServiceProvider, TService, TService> factory)
+    {
+        _decorators.Add(new DecoratorDescriptor(factory));
+        return this;
+    }
+
+    public IDecorationBuilder<TService> With(Func<IServiceProvider, TService, TService> factory)
+        => Then(factory);
 
     public IDecorationBuilder<TService> ThenIf<TDecorator>(bool condition)
         where TDecorator : class, TService
     {
         if (condition)
         {
-            _decorators.Add(typeof(TDecorator));
+            _decorators.Add(new DecoratorDescriptor(typeof(TDecorator)));
+        }
+        return this;
+    }
+
+    public IDecorationBuilder<TService> ThenIf(bool condition, Func<IServiceProvider, TService, TService> factory)
+    {
+        if (condition)
+        {
+            _decorators.Add(new DecoratorDescriptor(factory));
         }
         return this;
     }
 
     public IDecorationBuilder<TService> WithIf<TDecorator>(bool condition)
         where TDecorator : class, TService => ThenIf<TDecorator>(condition);
+
+    public IDecorationBuilder<TService> WithIf(bool condition, Func<IServiceProvider, TService, TService> factory)
+        => ThenIf(condition, factory);
 
     public IDecorationBuilder<TService> WithLifetime(ServiceLifetime lifetime)
     {
@@ -97,7 +118,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         }
     }
 
-    private void RegisterKeyedService(List<Type> wrapperDecorators, Type baseImplementation)
+    private void RegisterKeyedService(List<DecoratorDescriptor> wrapperDecorators, DecoratorDescriptor baseImplementation)
     {
         _services.Add(new ServiceDescriptor(
             typeof(TService),
@@ -107,7 +128,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         ));
     }
 
-    private void RegisterRegularService(List<Type> wrapperDecorators, Type baseImplementation)
+    private void RegisterRegularService(List<DecoratorDescriptor> wrapperDecorators, DecoratorDescriptor baseImplementation)
     {
         _services.Add(new ServiceDescriptor(
             typeof(TService),
@@ -117,16 +138,16 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     }
 
     /// <summary>
-    /// Validates that all decorators have the required constructor pattern.
+    /// Validates that all type-based decorators have the required constructor pattern.
     /// </summary>
     private void ValidateDecoratorChain()
     {
         foreach (var decorator in _decorators.Take(_decorators.Count - 1))
         {
-            if (!HasValidDecoratorConstructor(decorator))
+            if (decorator.IsTypeDescriptor && !HasValidDecoratorConstructor(decorator.DecoratorType!))
             {
                 throw new InvalidOperationException(
-                    $"Decorator {decorator.Name} must have a constructor that accepts {typeof(TService).Name} as its first parameter.");
+                    $"Decorator {decorator.DecoratorType!.Name} must have a constructor that accepts {typeof(TService).Name} as its first parameter.");
             }
         }
     }
@@ -145,15 +166,19 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     }
 
     private object BuildDecoratorChain(
-        IServiceProvider provider, List<Type> decorators, Type baseImplementation)
+        IServiceProvider provider, List<DecoratorDescriptor> decorators, DecoratorDescriptor baseImplementation)
     {
         try
         {
-            object current = ActivatorUtilities.GetServiceOrCreateInstance(provider, baseImplementation);
+            object current = baseImplementation.IsTypeDescriptor
+                ? ActivatorUtilities.GetServiceOrCreateInstance(provider, baseImplementation.DecoratorType!)
+                : baseImplementation.Factory!(provider, default(TService)!); // Base implementation factory won't use inner service
 
             foreach (var decorator in Enumerable.Reverse(decorators))
             {
-                current = ActivatorUtilities.CreateInstance(provider, decorator, current);
+                current = decorator.IsTypeDescriptor
+                    ? ActivatorUtilities.CreateInstance(provider, decorator.DecoratorType!, current)
+                    : decorator.Factory!(provider, (TService)current);
             }
 
             return current;
@@ -163,6 +188,26 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
             throw new InvalidOperationException(
                 $"Failed to build decorator chain for service type {typeof(TService).Name}. " +
                 $"Ensure all decorators have appropriate constructors and dependencies are registered.", ex);
+        }
+    }
+
+    /// <summary>
+    /// Represents a decorator that can be either a type or a factory function.
+    /// </summary>
+    private sealed class DecoratorDescriptor
+    {
+        public Type? DecoratorType { get; }
+        public Func<IServiceProvider, TService, TService>? Factory { get; }
+        public bool IsTypeDescriptor => DecoratorType != null;
+
+        public DecoratorDescriptor(Type decoratorType)
+        {
+            DecoratorType = decoratorType ?? throw new ArgumentNullException(nameof(decoratorType));
+        }
+
+        public DecoratorDescriptor(Func<IServiceProvider, TService, TService> factory)
+        {
+            Factory = factory ?? throw new ArgumentNullException(nameof(factory));
         }
     }
 }

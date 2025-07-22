@@ -26,13 +26,18 @@ public interface IDecorationBuilder<TService>
         where TDecorator : class, TService;
 
     /// <summary>
-    /// Conditionally adds a decorator to the decoration chain based on the provided condition.
+    /// Adds a decorator to the decoration chain using a custom factory method. This is an alias for <see cref="Then(Func{IServiceProvider, TService, TService})"/>.
     /// </summary>
-    /// <typeparam name="TDecorator">The decorator type that implements <typeparamref name="TService"/>.</typeparam>
-    /// <param name="condition">The condition that determines whether to add the decorator.</param>
+    /// <param name="factory">A factory function that creates the decorator instance.</param>
     /// <returns>The decoration builder for method chaining.</returns>
-    IDecorationBuilder<TService> ThenIf<TDecorator>(bool condition)
-        where TDecorator : class, TService;
+    IDecorationBuilder<TService> With(Func<IServiceProvider, TService, TService> factory);
+    
+    /// <summary>
+    /// Adds a decorator to the decoration chain using a custom factory method.
+    /// </summary>
+    /// <param name="factory">A factory function that creates the decorator instance.</param>
+    /// <returns>The decoration builder for method chaining.</returns>
+    IDecorationBuilder<TService> Then(Func<IServiceProvider, TService, TService> factory);
 
     /// <summary>
     /// Conditionally adds a decorator to the decoration chain based on the provided condition. This is an alias for <see cref="ThenIf{TDecorator}"/>.
@@ -42,6 +47,31 @@ public interface IDecorationBuilder<TService>
     /// <returns>The decoration builder for method chaining.</returns>
     IDecorationBuilder<TService> WithIf<TDecorator>(bool condition)
         where TDecorator : class, TService;
+    
+    /// <summary>
+    /// Conditionally adds a decorator to the decoration chain based on the provided condition.
+    /// </summary>
+    /// <typeparam name="TDecorator">The decorator type that implements <typeparamref name="TService"/>.</typeparam>
+    /// <param name="condition">The condition that determines whether to add the decorator.</param>
+    /// <returns>The decoration builder for method chaining.</returns>
+    IDecorationBuilder<TService> ThenIf<TDecorator>(bool condition)
+        where TDecorator : class, TService;
+
+    /// <summary>
+    /// Conditionally adds a decorator to the decoration chain using a custom factory method. This is an alias for <see cref="ThenIf(bool, Func{IServiceProvider, TService, TService})"/>.
+    /// </summary>
+    /// <param name="condition">The condition that determines whether to add the decorator.</param>
+    /// <param name="factory">A factory function that creates the decorator instance.</param>
+    /// <returns>The decoration builder for method chaining.</returns>
+    IDecorationBuilder<TService> WithIf(bool condition, Func<IServiceProvider, TService, TService> factory);
+    
+    /// <summary>
+    /// Conditionally adds a decorator to the decoration chain using a custom factory method.
+    /// </summary>
+    /// <param name="condition">The condition that determines whether to add the decorator.</param>
+    /// <param name="factory">A factory function that creates the decorator instance.</param>
+    /// <returns>The decoration builder for method chaining.</returns>
+    IDecorationBuilder<TService> ThenIf(bool condition, Func<IServiceProvider, TService, TService> factory);
 
     /// <summary>
     /// Sets the service lifetime for the decorated service.
