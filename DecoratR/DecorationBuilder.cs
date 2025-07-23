@@ -11,16 +11,26 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     where TService : class
 {
     private readonly IServiceCollection _services;
+#if NET8_0_OR_GREATER
     private readonly object? _serviceKey;
+#endif
     private readonly List<DecoratorDescriptor> _decorators = new();
     private ServiceLifetime _lifetime = ServiceLifetime.Transient;
 
-    // Single constructor with optional serviceKey parameter
-    public DecorationBuilder(IServiceCollection services, object? serviceKey = null)
+    // Constructor for regular services
+    public DecorationBuilder(IServiceCollection services)
+    {
+        _services = services;
+    }
+
+#if NET8_0_OR_GREATER
+    // Constructor for keyed services
+    public DecorationBuilder(IServiceCollection services, object? serviceKey)
     {
         _services = services;
         _serviceKey = serviceKey;
     }
+#endif
 
     public IDecorationBuilder<TService> With<TDecorator>()
         where TDecorator : class, TService => Then<TDecorator>();
@@ -83,13 +93,17 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         if (_decorators.Count == 0)
             throw new InvalidOperationException(
                 $"At least one decorator (the base implementation) must be provided for service type {typeof(TService).Name}" +
-                (_serviceKey != null ? $" with key '{_serviceKey}'" : "") + ".");
+#if NET8_0_OR_GREATER
+                (_serviceKey != null ? $" with key '{_serviceKey}'" : "") + 
+#endif
+                ".");
 
         ValidateDecoratorChain();
 
         var baseImplementation = _decorators.Last();
         var wrapperDecorators = _decorators.Take(_decorators.Count - 1).ToList();
 
+#if NET8_0_OR_GREATER
         if (_serviceKey != null)
         {
             // Handle keyed services
@@ -97,6 +111,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
             RegisterKeyedService(wrapperDecorators, baseImplementation);
         }
         else
+#endif
         {
             // Handle regular services
             _services.RemoveAll(typeof(TService));
@@ -104,6 +119,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         }
     }
 
+#if NET8_0_OR_GREATER
     private void RemoveExistingKeyedService()
     {
         var existingDescriptors = _services
@@ -127,6 +143,7 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
             _lifetime
         ));
     }
+#endif
 
     private void RegisterRegularService(List<DecoratorDescriptor> wrapperDecorators, DecoratorDescriptor baseImplementation)
     {

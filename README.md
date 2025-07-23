@@ -181,6 +181,8 @@ services.Decorate<IOrderService>()
 
 ## Keyed Services
 
+**Note**: Keyed services require .NET 8.0 or later. This feature is not available when targeting .NET 6.0.
+
 DecoratR fully supports .NET 8+ keyed services, allowing you to create different decorator chains for the same service type:
 
 ```csharp
@@ -561,8 +563,10 @@ DecoratR excels at implementing cross-cutting concerns:
 
 ## Requirements
 
-- .NET 9.0 or later
-- Microsoft.Extensions.DependencyInjection 10.0.0 or later
+- .NET 6.0 or later
+- Microsoft.Extensions.DependencyInjection 6.0.0 or later
+
+**Note**: Keyed services are only available in .NET 8.0 or later. If you're using .NET 6.0, you can only use the regular (non-keyed) decoration features.
 
 ## Contributing
 
