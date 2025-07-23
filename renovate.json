@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":automergeDigest",
+    ":automergeBranch"
+  ],
+  "timezone": "UTC",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "assignees": ["omarzawahry"],
+  "reviewers": ["omarzawahry"],
+  "platformAutomerge": true,
+  "packageRules": [
+    {
+      "description": "Auto-merge patch updates for stable packages",
+      "matchUpdateTypes": ["patch"],
+      "matchPackagePatterns": ["Microsoft.Extensions.*"],
+      "automerge": true
+    },
+    {
+      "description": "Auto-merge minor updates for Microsoft packages",
+      "matchUpdateTypes": ["minor"],
+      "matchPackagePatterns": ["Microsoft.Extensions.*"],
+      "automerge": true
+    },
+    {
+      "description": "Group all Microsoft.Extensions packages together",
+      "matchPackagePatterns": ["Microsoft.Extensions.*"],
+      "groupName": "Microsoft.Extensions packages"
+    },
+    {
+      "description": "Separate major updates for manual review",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["major-update", "dependencies"]
+    },
+    {
+      "description": "Handle .NET preview versions carefully",
+      "matchPackagePatterns": ["*"],
+      "matchCurrentVersion": "/(preview|alpha|beta|rc)/",
+      "automerge": false,
+      "labels": ["preview", "dependencies"]
+    }
+  ],
+  "nuget": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true
+  },
+  "prTitle": "chore(deps): update {{depName}} to {{newVersion}}",
+  "prBodyTemplate": "This PR updates {{depName}} from {{currentVersion}} to {{newVersion}}.\n\n{{#if hasReleaseNotes}}\n### Release Notes\n{{{releaseNotes}}}\n{{/if}}\n\n{{#if isPin}}\n⚠️ This is a pin to a specific version.\n{{/if}}\n\n{{#if isMajor}}\n⚠️ This is a **major version update** - please review carefully.\n{{/if}}\n\n---\n*This PR was automatically created by Renovate*",
+  "prConcurrentLimit": 5,
+  "branchConcurrentLimit": 10
+}
