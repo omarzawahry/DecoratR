@@ -14,13 +14,13 @@ public class CustomFactoryExample
 
         // Example 1: Basic custom factory as requested
         services.Decorate<IUserService>()
-                .Then((sp, inner) => new CustomDecorator(inner, sp.GetRequiredService<IMetrics>()))
+                .With((sp, inner) => new CustomDecorator(inner, sp.GetRequiredService<IMetrics>()))
                 .Then<UserService>()
                 .Apply();
 
         // Example 2: Complex custom factory with multiple dependencies
         services.Decorate<IUserService>("complex")
-                .Then((sp, inner) => new ComplexDecorator(
+                .With((sp, inner) => new ComplexDecorator(
                     inner,
                     sp.GetRequiredService<IMetrics>(),
                     sp.GetRequiredService<IConfiguration>(),
@@ -30,7 +30,7 @@ public class CustomFactoryExample
 
         // Example 3: Mixing custom factories with type-based decorators
         services.Decorate<IUserService>("mixed")
-                .Then<LoggingDecorator>()
+                .With<LoggingDecorator>()
                 .Then((sp, inner) => new MetricsDecorator(inner, sp.GetRequiredService<IMetrics>()))
                 .Then<RetryDecorator>()
                 .Then<UserService>()
@@ -39,14 +39,14 @@ public class CustomFactoryExample
         // Example 4: Conditional custom factories
         bool enableAdvancedFeatures = true;
         services.Decorate<IUserService>("conditional")
-                .ThenIf(enableAdvancedFeatures, (sp, inner) => 
+                .WithIf(enableAdvancedFeatures, (sp, inner) =>
                     new AdvancedDecorator(inner, sp.GetRequiredService<IConfiguration>()))
                 .Then<UserService>()
                 .Apply();
 
         // Example 5: Custom factory for base implementation
         services.Decorate<IUserService>("custom-base")
-                .Then<AuditDecorator>()
+                .With<AuditDecorator>()
                 .Then((sp, _) => new CustomUserService(sp.GetRequiredService<IConfiguration>()))
                 .Apply();
     }

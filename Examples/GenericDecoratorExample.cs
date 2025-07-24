@@ -13,7 +13,7 @@ public class GenericDecoratorExample
 
         // Example 1: Basic unconstrained generic decorators
         services.Decorate<IUserService>("primitive-types")
-                .Then<GenericDecorator<string>>()    // T = string
+                .With<GenericDecorator<string>>()    // T = string
                 .Then<GenericDecorator<int>>()       // T = int
                 .Then<GenericDecorator<bool>>()      // T = bool
                 .Then<UserService>()
@@ -21,13 +21,13 @@ public class GenericDecoratorExample
 
         // Example 2: Multi-generic decorator with string and int (as requested)
         services.Decorate<IUserService>("multi-generic")
-                .Then<MultiGenericDecorator<string, int>>()  // T1 = string, T2 = int
+                .With<MultiGenericDecorator<string, int>>()  // T1 = string, T2 = int
                 .Then<UserService>()
                 .Apply();
 
         // Example 3: Generic decorators with value types and structs
         services.Decorate<IUserService>("value-types")
-                .Then<GenericDecorator<DateTime>>()
+                .With<GenericDecorator<DateTime>>()
                 .Then<GenericDecorator<Guid>>()
                 .Then<GenericDecorator<decimal>>()
                 .Then<UserService>()
@@ -35,26 +35,26 @@ public class GenericDecoratorExample
 
         // Example 4: Complex generic types
         services.Decorate<IUserService>("complex-generics")
-                .Then<GenericDecorator<List<Dictionary<string, int>>>>()
+                .With<GenericDecorator<List<Dictionary<string, int>>>>()
                 .Then<MultiGenericDecorator<Dictionary<string, object>, List<int>>>()
                 .Then<UserService>()
                 .Apply();
 
         // Example 5: Triple generic decorator
         services.Decorate<IUserService>("triple-generic")
-                .Then<TripleGenericDecorator<string, int, bool>>()
+                .With<TripleGenericDecorator<string, int, bool>>()
                 .Then<UserService>()
                 .Apply();
 
         // Example 6: Generic decorators with dependencies
         services.Decorate<IUserService>("with-dependencies")
-                .Then<GenericDecoratorWithDependencies<DateTime>>()
+                .With<GenericDecoratorWithDependencies<DateTime>>()
                 .Then<UserService>()
                 .Apply();
 
         // Example 7: Mixing generic and regular decorators
         services.Decorate<IUserService>("mixed")
-                .Then<LoggingDecorator>()                    // Regular decorator
+                .With<LoggingDecorator>()                    // Regular decorator
                 .Then<GenericDecorator<string>>()            // Generic decorator
                 .Then<AuditDecorator>()                      // Regular decorator
                 .Then<MultiGenericDecorator<int, bool>>()    // Multi-generic decorator
@@ -66,15 +66,15 @@ public class GenericDecoratorExample
         bool enableIntProcessing = false;
 
         services.Decorate<IUserService>("conditional")
-                .ThenIf<GenericDecorator<string>>(enableStringProcessing)  // Will be added
+                .WithIf<GenericDecorator<string>>(enableStringProcessing)  // Will be added
                 .ThenIf<GenericDecorator<int>>(enableIntProcessing)        // Will be skipped
                 .Then<UserService>()
                 .Apply();
 
         // Example 9: Custom factory with generic decorators
         services.Decorate<IUserService>("factory")
-                .Then((sp, inner) => new GenericFactoryDecorator<DateTime>(
-                    inner, 
+                .With((sp, inner) => new GenericFactoryDecorator<DateTime>(
+                    inner,
                     sp.GetRequiredService<IMetrics>()))
                 .Then<UserService>()
                 .Apply();
