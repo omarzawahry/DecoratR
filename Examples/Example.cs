@@ -9,7 +9,7 @@ public class ExampleUsage
     {
         // Example of conditional decoration based on environment
         services.Decorate<IService>()
-                .Then<LoggingDecorator>()
+                .With<LoggingDecorator>()
                 .ThenIf<RetryDecorator>(env.IsDevelopment()) // Only add retry in development
                 .Then<BaseService>()
                 .Apply();
@@ -17,7 +17,7 @@ public class ExampleUsage
         // Example with multiple conditions
         bool isLoggingEnabled = true;
         bool isProduction = env.IsProduction();
-        
+
         services.Decorate<IService>()
                 .WithIf<LoggingDecorator>(isLoggingEnabled)
                 .ThenIf<RetryDecorator>(!isProduction) // Retry only in non-production
