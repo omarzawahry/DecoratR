@@ -21,6 +21,12 @@ jobs:
         with:
           dotnet-version: ${{ matrix.dotnet-version }}
 
+      # Install .NET 9.0 SDK when testing any version to support multi-targeting
+      - name: Setup .NET 9.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
       - name: Restore dependencies
         run: dotnet restore
 
@@ -47,7 +53,11 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: |
+            6.0.x
+            7.0.x
+            8.0.x
+            9.0.x
 
       # 3. Restore dependencies
       - name: Restore dependencies
