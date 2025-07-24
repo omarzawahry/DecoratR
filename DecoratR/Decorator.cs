@@ -19,7 +19,7 @@ public static class DecoratorServiceCollectionExtensions
 
 #if NET8_0_OR_GREATER
     /// <summary>
-    /// Begins decoration configuration for the specified keyed service type.Rejigs
+    /// Begins decoration configuration for the specified keyed service type.
     /// </summary>
     /// <typeparam name="TService">The service type to decorate.</typeparam>
     /// <param name="services">The service collection to configure.</param>
