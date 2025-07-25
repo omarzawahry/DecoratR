@@ -76,23 +76,6 @@ public class LoggingDecorator : IService
 public interface IOrderService
 {
     Task<Order> GetOrderAsync(int orderId);
-    Task<Order> CreateOrderAsync(Order order);
-}
-
-// Base implementation
-public class OrderService : IOrderService
-{
-    public async Task<Order> GetOrderAsync(int orderId)
-    {
-        // Database logic here
-        return new Order { Id = orderId };
-    }
-
-    public async Task<Order> CreateOrderAsync(Order order)
-    {
-        // Creation logic here
-        return order;
-    }
 }
 
 // Decorators
@@ -112,14 +95,6 @@ public class LoggingDecorator : IOrderService
         _logger.LogInformation("Getting order {OrderId}", orderId);
         var result = await _inner.GetOrderAsync(orderId);
         _logger.LogInformation("Retrieved order {OrderId}", result.Id);
-        return result;
-    }
-
-    public async Task<Order> CreateOrderAsync(Order order)
-    {
-        _logger.LogInformation("Creating order");
-        var result = await _inner.CreateOrderAsync(order);
-        _logger.LogInformation("Created order {OrderId}", result.Id);
         return result;
     }
 }
@@ -147,10 +122,15 @@ public class CacheDecorator : IOrderService
         _cache.Set(cacheKey, order, TimeSpan.FromMinutes(5));
         return order;
     }
+}
 
-    public async Task<Order> CreateOrderAsync(Order order)
+// Base implementation
+public class OrderService : IOrderService
+{
+    public async Task<Order> GetOrderAsync(int orderId)
     {
-        return await _inner.CreateOrderAsync(order);
+        // Database logic here
+        return new Order { Id = orderId };
     }
 }
 
@@ -181,7 +161,7 @@ services.Decorate<IOrderService>()
 
 ## Keyed Services
 
-**Note**: Keyed services require .NET 8.0 or later. This feature is not available when targeting .NET 6.0.
+**Note**: Keyed services require .NET 8.0 or later. This feature is not available when targeting .NET 6.0 or 7.0.
 
 DecoratR fully supports .NET 8+ keyed services, allowing you to create different decorator chains for the same service type:
 
@@ -268,7 +248,8 @@ services.Decorate<IOrderService>()
         .Then((serviceProvider, _) =>
         {
             var connectionString = serviceProvider.GetRequiredService<IConfiguration>()
-                .GetConnectionString("DefaultConnection");
+                                                  .GetConnectionString("DefaultConnection");
+            
             return new DatabaseOrderService(connectionString);
         })
         .Apply();
@@ -566,7 +547,7 @@ DecoratR excels at implementing cross-cutting concerns:
 - .NET 6.0 or later
 - Microsoft.Extensions.DependencyInjection 6.0.0 or later
 
-**Note**: Keyed services are only available in .NET 8.0 or later. If you're using .NET 6.0, you can only use the regular (non-keyed) decoration features.
+**Note**: Keyed services are only available in .NET 8.0 or later. If you're using .NET 6.0 or 7.0, you can only use the regular (non-keyed) decoration features.
 
 ## Contributing
 
