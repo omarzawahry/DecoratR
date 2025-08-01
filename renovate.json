@@ -3,39 +3,27 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard",
-    ":semanticCommits",
-    ":automergeDigest",
-    ":automergeBranch"
+    ":semanticCommits"
   ],
   "timezone": "UTC",
   "schedule": ["before 6am on friday"],
   "labels": ["dependencies"],
   "assignees": ["omarzawahry"],
   "reviewers": ["omarzawahry"],
-  "platformAutomerge": true,
+  "platformAutomerge": false,
+  "automerge": false,
   "packageRules": [
     {
-      "description": "Auto-merge patch updates for stable packages",
-      "matchUpdateTypes": ["patch"],
-      "matchPackagePatterns": ["Microsoft.Extensions.*"],
-      "automerge": true
-    },
-    {
-      "description": "Auto-merge minor updates for Microsoft packages",
-      "matchUpdateTypes": ["minor"],
-      "matchPackagePatterns": ["Microsoft.Extensions.*"],
-      "automerge": true
+      "description": "Require manual review for all updates",
+      "matchUpdateTypes": ["patch", "minor", "major"],
+      "automerge": false,
+      "labels": ["dependencies"]
     },
     {
       "description": "Group all Microsoft.Extensions packages together",
       "matchPackagePatterns": ["Microsoft.Extensions.*"],
-      "groupName": "Microsoft.Extensions packages"
-    },
-    {
-      "description": "Separate major updates for manual review",
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "labels": ["major-update", "dependencies"]
+      "groupName": "Microsoft.Extensions packages",
+      "automerge": false
     },
     {
       "description": "Handle .NET preview versions carefully",
