@@ -39,10 +39,10 @@
   "github-actions": {
     "enabled": true
   },
-  "commitMessage": {
-    "prefix": "deps",
-    "include": ["scope", "package", "version"]
-  },
+  "commitMessagePrefix": "deps: ",
+  "commitMessageAction": "{{action}}",
+  "commitMessageTopic": "{{depName}}",
+  "commitMessageExtra": " to {{newVersion}}",
   "prBodyTemplate": "This PR updates {{depName}} from {{currentVersion}} to {{newVersion}}.\n\n{{#if hasReleaseNotes}}\n### Release Notes\n{{{releaseNotes}}}\n{{/if}}\n\n{{#if isPin}}\n⚠️ This is a pin to a specific version.\n{{/if}}\n\n{{#if isMajor}}\n⚠️ This is a **major version update** - please review carefully.\n{{/if}}\n\n---\n*This PR was automatically created by Renovate*",
   "prConcurrentLimit": 5,
   "branchConcurrentLimit": 10
