@@ -8,41 +8,69 @@
     ":automergeBranch"
   ],
   "timezone": "UTC",
-  "schedule": ["before 6am on friday"],
-  "labels": ["dependencies"],
-  "assignees": ["omarzawahry"],
-  "reviewers": ["omarzawahry"],
+  "schedule": [
+    "before 6am on friday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "assignees": [
+    "omarzawahry"
+  ],
+  "reviewers": [
+    "omarzawahry"
+  ],
   "platformAutomerge": true,
   "packageRules": [
     {
       "description": "Auto-merge patch updates for stable packages",
-      "matchUpdateTypes": ["patch"],
-      "matchPackagePatterns": ["Microsoft.Extensions.*"],
-      "automerge": true
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true,
+      "matchPackageNames": [
+        "/Microsoft.Extensions.*/"
+      ]
     },
     {
       "description": "Auto-merge minor updates for Microsoft packages",
-      "matchUpdateTypes": ["minor"],
-      "matchPackagePatterns": ["Microsoft.Extensions.*"],
-      "automerge": true
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "automerge": true,
+      "matchPackageNames": [
+        "/Microsoft.Extensions.*/"
+      ]
     },
     {
       "description": "Group all Microsoft.Extensions packages together",
-      "matchPackagePatterns": ["Microsoft.Extensions.*"],
-      "groupName": "Microsoft.Extensions packages"
+      "groupName": "Microsoft.Extensions packages",
+      "matchPackageNames": [
+        "/Microsoft.Extensions.*/"
+      ]
     },
     {
       "description": "Separate major updates for manual review",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false,
-      "labels": ["major-update", "dependencies"]
+      "labels": [
+        "major-update",
+        "dependencies"
+      ]
     },
     {
       "description": "Handle .NET preview versions carefully",
-      "matchPackagePatterns": ["*"],
       "matchCurrentVersion": "/(preview|alpha|beta|rc)/",
       "automerge": false,
-      "labels": ["preview", "dependencies"]
+      "labels": [
+        "preview",
+        "dependencies"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
     }
   ],
   "nuget": {
