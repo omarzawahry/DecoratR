@@ -1,3 +1,7 @@
+![NuGet](https://img.shields.io/nuget/v/DecoratR)
+[![NuGet](https://img.shields.io/nuget/dt/decoratr.svg)](https://www.nuget.org/packages/decoratr)
+![Build Status](https://github.com/omarzawahry/DecoratR/actions/workflows/prod-ci.yml/badge.svg?branch=main)
+
 # DecoratR
 
 A powerful and intuitive .NET library for implementing the Decorator pattern with Microsoft's Dependency Injection container. DecoratR provides a fluent API to chain decorators around your services, enabling cross-cutting concerns like logging, caching, retry logic, and more.
