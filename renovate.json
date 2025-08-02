@@ -6,31 +6,52 @@
     ":semanticCommits"
   ],
   "timezone": "UTC",
-  "schedule": ["before 6am on friday"],
-  "labels": ["dependencies"],
-  "assignees": ["omarzawahry"],
-  "reviewers": ["omarzawahry"],
+  "schedule": [
+    "before 6am on friday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "assignees": [
+    "omarzawahry"
+  ],
+  "reviewers": [
+    "omarzawahry"
+  ],
   "platformAutomerge": false,
   "automerge": false,
   "packageRules": [
     {
       "description": "Require manual review for all updates",
-      "matchUpdateTypes": ["patch", "minor", "major"],
+      "matchUpdateTypes": [
+        "patch",
+        "minor",
+        "major"
+      ],
       "automerge": false,
-      "labels": ["dependencies"]
+      "labels": [
+        "dependencies"
+      ]
     },
     {
       "description": "Group all Microsoft.Extensions packages together",
-      "matchPackagePatterns": ["Microsoft.Extensions.*"],
       "groupName": "Microsoft.Extensions packages",
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": [
+        "/Microsoft.Extensions.*/"
+      ]
     },
     {
       "description": "Handle .NET preview versions carefully",
-      "matchPackagePatterns": ["*"],
       "matchCurrentVersion": "/(preview|alpha|beta|rc)/",
       "automerge": false,
-      "labels": ["preview", "dependencies"]
+      "labels": [
+        "preview",
+        "dependencies"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
     }
   ],
   "nuget": {
