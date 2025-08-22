@@ -155,16 +155,83 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     }
 
     /// <summary>
-    /// Validates that all type-based decorators have the required constructor pattern.
+    /// Validates that all type-based decorators have the required constructor pattern
+    /// and checks for potential circular dependencies.
     /// </summary>
     private void ValidateDecoratorChain()
     {
+        // Check for duplicate decorator types (direct circular dependency)
+        var decoratorTypes = _decorators
+            .Where(d => d.IsTypeDescriptor)
+            .Select(d => d.DecoratorType!)
+            .ToList();
+
+        var duplicateTypes = decoratorTypes
+            .GroupBy(t => t)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateTypes.Any())
+        {
+            throw new InvalidOperationException(
+                $"Circular dependency detected: The following decorator types appear multiple times in the chain: {string.Join(", ", duplicateTypes.Select(t => t.Name))}. " +
+                "Each decorator type should only appear once in a decoration chain.");
+        }
+
+        // Validate constructor patterns and check for potential DI circular dependencies
         foreach (var decorator in _decorators.Take(_decorators.Count - 1))
         {
-            if (decorator.IsTypeDescriptor && !HasValidDecoratorConstructor(decorator.DecoratorType!))
+            if (decorator.IsTypeDescriptor)
+            {
+                if (!HasValidDecoratorConstructor(decorator.DecoratorType!))
+                {
+                    throw new InvalidOperationException(
+                        $"Decorator {decorator.DecoratorType!.Name} must have a constructor that accepts {typeof(TService).Name} as its first parameter.");
+                }
+
+                // Check for potential circular DI dependencies
+                ValidateDecoratorDependencies(decorator.DecoratorType!);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that a decorator doesn't have constructor dependencies that could create circular references.
+    /// </summary>
+    private void ValidateDecoratorDependencies(Type decoratorType)
+    {
+        var constructors = decoratorType.GetConstructors();
+        var primaryConstructor = constructors
+            .Where(ctor => ctor.GetParameters().Length > 0 && ctor.GetParameters()[0].ParameterType == typeof(TService))
+            .OrderByDescending(ctor => ctor.GetParameters().Length)
+            .FirstOrDefault();
+
+        if (primaryConstructor == null) return;
+
+        var parameters = primaryConstructor.GetParameters().Skip(1); // Skip the first parameter (the wrapped service)
+        
+        foreach (var parameter in parameters)
+        {
+            // Check if any parameter type is the same as the service type we're decorating
+            if (parameter.ParameterType == typeof(TService))
             {
                 throw new InvalidOperationException(
-                    $"Decorator {decorator.DecoratorType!.Name} must have a constructor that accepts {typeof(TService).Name} as its first parameter.");
+                    $"Circular dependency detected: Decorator {decoratorType.Name} has a constructor parameter of type {typeof(TService).Name} " +
+                    "in addition to the required first parameter. This creates a circular dependency.");
+            }
+
+            // Check for generic types that might contain the service type
+            if (parameter.ParameterType.IsGenericType)
+            {
+                var genericArguments = parameter.ParameterType.GetGenericArguments();
+                if (genericArguments.Contains(typeof(TService)))
+                {
+                    throw new InvalidOperationException(
+                        $"Potential circular dependency detected: Decorator {decoratorType.Name} has a constructor parameter " +
+                        $"of type {parameter.ParameterType.Name} that contains {typeof(TService).Name} as a generic argument. " +
+                        "This may create a circular dependency.");
+                }
             }
         }
     }
