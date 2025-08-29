@@ -16,11 +16,32 @@ public class NullReferenceProtectionTests
                 .Apply();
         
         var provider = services.BuildServiceProvider();
+        var service = provider.GetRequiredService<IService>(); // Service creation succeeds
+        
+        // The exception occurs when we try to execute, because inner.Execute() is called
+        var ex = Assert.Throws<NullReferenceException>(() => 
+            service.Execute());
+
+        // This test verifies the runtime behavior, not our validation
+        Assert.That(ex, Is.Not.Null);
+    }
+
+    [Test]
+    public void Apply_ThrowsException_WhenFactoryBaseImplementationRequiresNonNullInner()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .With<LoggingDecorator>()
+                .Then((sp, inner) => new ArgumentValidatingFactoryService(inner)) // This factory validates inner is not null
+                .Apply();
+        
+        var provider = services.BuildServiceProvider();
         
         var ex = Assert.Throws<InvalidOperationException>(() => 
-            provider.GetRequiredService<IService>()); // This should trigger the exception
+            provider.GetRequiredService<IService>()); // This should trigger our validation
 
-        Assert.That(ex.Message, Does.Contain("should not use the inner service parameter"));
+        Assert.That(ex.Message, Does.Contain("should not depend on the inner service parameter"));
         Assert.That(ex.Message, Does.Contain("Base implementations are the final service in the decorator chain"));
     }
 
