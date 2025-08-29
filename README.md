@@ -4,17 +4,17 @@
 
 # DecoratR
 
-A powerful and intuitive .NET library for implementing the Decorator pattern with Microsoft's Dependency Injection container. DecoratR provides a fluent API to chain decorators around your services, enabling cross-cutting concerns like logging, caching, retry logic, and more.
+Intuitive .NET library for implementing the Decorator pattern with Microsoft's Dependency Injection container. DecoratR provides a fluent API to chain decorators around your services, enabling cross-cutting concerns like logging, caching, retry logic, and more.
 
 ## Features
 
-- **Fluent API**: Intuitive and readable decorator chain configuration
-- **Regular Services**: Decorate standard services registered with dependency injection
-- **Keyed Services**: Full support for .NET 8+ keyed services
-- **Custom Factories**: Create decorators with complex dependencies using factory methods
-- **Generic Decorators**: Support for generic decorator types with multiple type parameters
-- **Conditional Decoration**: Apply decorators based on runtime conditions
-- **Lifetime Management**: Control service lifetimes (Singleton, Scoped, Transient)
+- **[Fluent API](#quick-start)**: Intuitive and readable decorator chain configuration
+- **[Regular Services](#basic-usage)**: Decorate standard services registered with dependency injection
+- **[Keyed Services](#keyed-services)**: Full support for .NET 8+ keyed services
+- **[Custom Factories](#custom-factory-methods)**: Create decorators with complex dependencies using factory methods
+- **[Generic Decorators](#generic-decorators)**: Support for generic decorator types with multiple type parameters
+- **[Conditional Decoration](#conditional-decoration)**: Apply decorators based on runtime conditions
+- **[Lifetime Management](#lifetime-management)**: Control service lifetimes (Singleton, Scoped, Transient)
 
 ## Installation
 
@@ -61,13 +61,9 @@ services.Decorate<IService>()
 Decorators (except the base implementation) must have a constructor that accepts the service type as the first parameter:
 
 ```csharp
-public class LoggingDecorator : IService
+public class LoggingDecorator(IService inner) : IService
 {
-    private readonly IService _inner;
-
-    public LoggingDecorator(IService inner) => _inner = inner;
-
-    public string Execute() => $"Log({_inner.Execute()})";
+    public string Execute() => $"Log({inner.Execute()})";
 }
 ```
 
@@ -82,66 +78,33 @@ public interface IOrderService
     Task<Order> GetOrderAsync(int orderId);
 }
 
-// Decorators
-public class LoggingDecorator : IOrderService
+// Logging decorator
+public class LoggingDecorator(IOrderService inner) : IOrderService
 {
-    private readonly IOrderService _inner;
-    private readonly ILogger<LoggingDecorator> _logger;
-
-    public LoggingDecorator(IOrderService inner, ILogger<LoggingDecorator> logger)
-    {
-        _inner = inner;
-        _logger = logger;
-    }
-
     public async Task<Order> GetOrderAsync(int orderId)
     {
-        _logger.LogInformation("Getting order {OrderId}", orderId);
-        var result = await _inner.GetOrderAsync(orderId);
-        _logger.LogInformation("Retrieved order {OrderId}", result.Id);
-        return result;
+        Console.WriteLine($"Getting order {orderId}");
+        return await inner.GetOrderAsync(orderId);
     }
 }
 
-public class CacheDecorator : IOrderService
+// Cache decorator
+public class CacheDecorator(IOrderService inner) : IOrderService
 {
-    private readonly IOrderService _inner;
-    private readonly IMemoryCache _cache;
-
-    public CacheDecorator(IOrderService inner, IMemoryCache cache)
-    {
-        _inner = inner;
-        _cache = cache;
-    }
+    private static readonly Dictionary<int, Order> _cache = new();
 
     public async Task<Order> GetOrderAsync(int orderId)
     {
-        var cacheKey = $"order_{orderId}";
-        if (_cache.TryGetValue(cacheKey, out Order cachedOrder))
-        {
+        if (_cache.TryGetValue(orderId, out var cachedOrder))
             return cachedOrder;
-        }
 
-        var order = await _inner.GetOrderAsync(orderId);
-        _cache.Set(cacheKey, order, TimeSpan.FromMinutes(5));
+        var order = await inner.GetOrderAsync(orderId);
+        _cache[orderId] = order;
         return order;
     }
 }
 
-// Base implementation
-public class OrderService : IOrderService
-{
-    public async Task<Order> GetOrderAsync(int orderId)
-    {
-        // Database logic here
-        return new Order { Id = orderId };
-    }
-}
-
 // Configuration
-services.AddScoped<ILogger<LoggingDecorator>>();
-services.AddMemoryCache();
-
 services.Decorate<IOrderService>()
         .With<LoggingDecorator>()
         .Then<CacheDecorator>()
@@ -265,50 +228,35 @@ DecoratR supports generic decorators with multiple type parameters:
 
 ```csharp
 // Generic decorator with one type parameter
-public class GenericCacheDecorator<T> : IService<T>
+public class CacheDecorator<T>(IService<T> inner) : IService<T>
 {
-    private readonly IService<T> _inner;
-    private readonly IMemoryCache _cache;
-
-    public GenericCacheDecorator(IService<T> inner, IMemoryCache cache)
-    {
-        _inner = inner;
-        _cache = cache;
-    }
+    private static readonly Dictionary<string, T> _cache = new();
 
     public async Task<T> GetAsync(string key)
     {
-        var cacheKey = $"{typeof(T).Name}_{key}";
-        if (_cache.TryGetValue(cacheKey, out T cachedValue))
-        {
+        if (_cache.TryGetValue(key, out var cachedValue))
             return cachedValue;
-        }
 
-        var value = await _inner.GetAsync(key);
-        _cache.Set(cacheKey, value, TimeSpan.FromMinutes(5));
+        var value = await inner.GetAsync(key);
+        _cache[key] = value;
         return value;
     }
 }
 
 // Multiple generic parameters
-public class TransformDecorator<TInput, TOutput> : ITransformService<TInput, TOutput>
+public class TransformDecorator<TInput, TOutput>(ITransformService<TInput, TOutput> inner) 
+    : ITransformService<TInput, TOutput>
 {
-    private readonly ITransformService<TInput, TOutput> _inner;
-
-    public TransformDecorator(ITransformService<TInput, TOutput> inner) => _inner = inner;
-
     public async Task<TOutput> TransformAsync(TInput input)
     {
-        // Pre-processing logic
-        var result = await _inner.TransformAsync(input);
-        // Post-processing logic
-        return result;
+        Console.WriteLine($"Transforming {typeof(TInput).Name} to {typeof(TOutput).Name}");
+        return await inner.TransformAsync(input);
     }
 }
 
 // Configuration
 services.Decorate<IService<string>>()
-        .With<GenericCacheDecorator<string>>()
+        .With<CacheDecorator<string>>()
         .Then<StringService>()
         .Apply();
 
@@ -352,72 +300,6 @@ services.Decorate<IOrderService>()
         .Apply();
 ```
 
-## Real-World Examples
-
-### E-commerce Order Processing
-
-```csharp
-public class OrderProcessingConfiguration
-{
-    public void ConfigureServices(IServiceCollection services, IConfiguration config)
-    {
-        var enableMetrics = config.GetValue<bool>("Features:Metrics");
-        var enableRetry = config.GetValue<bool>("Features:Retry");
-        var enableAudit = config.GetValue<bool>("Features:Audit");
-
-        services.Decorate<IOrderService>()
-                .WithIf<MetricsDecorator>(enableMetrics)
-                .Then<ValidationDecorator>()
-                .ThenIf<RetryDecorator>(enableRetry)
-                .Then<CacheDecorator>()
-                .ThenIf<AuditDecorator>(enableAudit)
-                .Then<DatabaseOrderService>()
-                .AsScoped()
-                .Apply();
-
-        // Payment service with different requirements
-        services.Decorate<IPaymentService>()
-                .With<SecurityDecorator>()
-                .Then<LoggingDecorator>()
-                .Then<RateLimitingDecorator>()
-                .Then<PaymentService>()
-                .Apply();
-    }
-}
-```
-
-### Multi-tenant Application
-
-```csharp
-public class MultiTenantConfiguration
-{
-    public void ConfigureServices(IServiceCollection services)
-    {
-        // Different configurations per tenant
-        services.Decorate<IDataService>("tenant-basic")
-                .With<LoggingDecorator>()
-                .Then<BasicDataService>()
-                .Apply();
-
-        services.Decorate<IDataService>("tenant-premium")
-                .With<LoggingDecorator>()
-                .Then<CacheDecorator>()
-                .Then<MetricsDecorator>()
-                .Then<PremiumDataService>()
-                .Apply();
-
-        services.Decorate<IDataService>("tenant-enterprise")
-                .With<SecurityDecorator>()
-                .Then<AuditDecorator>()
-                .Then<LoggingDecorator>()
-                .Then<CacheDecorator>()
-                .Then<MetricsDecorator>()
-                .Then<EnterpriseDataService>()
-                .Apply();
-    }
-}
-```
-
 ## Best Practices
 
 ### 1. Decorator Ordering
@@ -441,26 +323,17 @@ services.Decorate<IService>()
 Implement proper error handling in decorators:
 
 ```csharp
-public class ErrorHandlingDecorator : IService
+public class ErrorHandlingDecorator(IService inner, ILogger<ErrorHandlingDecorator> logger) : IService
 {
-    private readonly IService _inner;
-    private readonly ILogger<ErrorHandlingDecorator> _logger;
-
-    public ErrorHandlingDecorator(IService inner, ILogger<ErrorHandlingDecorator> logger)
-    {
-        _inner = inner;
-        _logger = logger;
-    }
-
     public async Task<Result> ExecuteAsync(Request request)
     {
         try
         {
-            return await _inner.ExecuteAsync(request);
+            return await inner.ExecuteAsync(request);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing request {RequestId}", request.Id);
+            logger.LogError(ex, "Error executing request {RequestId}", request.Id);
             throw;
         }
     }
@@ -523,28 +396,6 @@ public void LoggingDecorator_ShouldLogExecution()
 - `AsScoped()` - Set lifetime to Scoped
 - `AsTransient()` - Set lifetime to Transient
 - `Apply()` - Apply the decoration configuration
-
-## Common Scenarios
-
-### Cross-Cutting Concerns
-
-DecoratR excels at implementing cross-cutting concerns:
-
-- **Logging**: Track method calls and performance
-- **Caching**: Store frequently accessed data
-- **Retry Logic**: Handle transient failures
-- **Rate Limiting**: Control API usage
-- **Security**: Authentication and authorization
-- **Metrics**: Performance monitoring
-- **Validation**: Input/output validation
-- **Circuit Breaker**: Fault tolerance
-
-### Integration Patterns
-
-- **Repository Pattern**: Add caching and logging to data access
-- **Command/Query Pattern**: Add validation and auditing
-- **API Clients**: Add retry, rate limiting, and circuit breaker logic
-- **Message Handlers**: Add error handling and dead letter queue logic
 
 ## Requirements
 
