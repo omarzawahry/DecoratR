@@ -90,6 +90,8 @@ public class LoggingDecorator(IService inner) : IService
 ### Simple Decorator Chain
 
 ```csharp
+using System.Collections.Concurrent;
+
 // Service interface
 public interface IOrderService
 {
