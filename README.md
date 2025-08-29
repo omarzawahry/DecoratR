@@ -6,15 +6,33 @@
 
 Intuitive .NET library for implementing the Decorator pattern with Microsoft's Dependency Injection container. DecoratR provides a fluent API to chain decorators around your services, enabling cross-cutting concerns like logging, caching, retry logic, and more.
 
-## Features
+## Table of Contents
 
-- **[Fluent API](#quick-start)**: Intuitive and readable decorator chain configuration
-- **[Regular Services](#basic-usage)**: Decorate standard services registered with dependency injection
-- **[Keyed Services](#keyed-services)**: Full support for .NET 8+ keyed services
-- **[Custom Factories](#custom-factory-methods)**: Create decorators with complex dependencies using factory methods
-- **[Generic Decorators](#generic-decorators)**: Support for generic decorator types with multiple type parameters
-- **[Conditional Decoration](#conditional-decoration)**: Apply decorators based on runtime conditions
-- **[Lifetime Management](#lifetime-management)**: Control service lifetimes (Singleton, Scoped, Transient)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+  - [Decorator Chain Order](#decorator-chain-order)
+  - [Constructor Requirements](#constructor-requirements)
+- [Basic Usage](#basic-usage)
+  - [Simple Decorator Chain](#simple-decorator-chain)
+  - [Conditional Decoration](#conditional-decoration)
+- [Keyed Services](#keyed-services)
+  - [Complex Keys](#complex-keys)
+- [Custom Factory Methods](#custom-factory-methods)
+  - [Advanced Factory Examples](#advanced-factory-examples)
+- [Generic Decorators](#generic-decorators)
+- [Lifetime Management](#lifetime-management)
+- [Best Practices](#best-practices)
+  - [1. Decorator Ordering](#1-decorator-ordering)
+  - [2. Error Handling](#2-error-handling)
+  - [3. Performance Considerations](#3-performance-considerations)
+  - [4. Testing](#4-testing)
+- [API Reference](#api-reference)
+  - [Extension Methods](#extension-methods)
+  - [IDecorationBuilder Methods](#idecorationbuilder-methods)
+- [Requirements](#requirements)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Installation
 
