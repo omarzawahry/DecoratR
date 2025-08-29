@@ -90,6 +90,8 @@ public class LoggingDecorator(IService inner) : IService
 ### Simple Decorator Chain
 
 ```csharp
+using System.Collections.Concurrent;
+
 // Service interface
 public interface IOrderService
 {
@@ -109,7 +111,7 @@ public class LoggingDecorator(IOrderService inner) : IOrderService
 // Cache decorator
 public class CacheDecorator(IOrderService inner) : IOrderService
 {
-    private static readonly Dictionary<int, Order> _cache = new();
+    private static readonly ConcurrentDictionary<int, Order> _cache = new();
 
     public async Task<Order> GetOrderAsync(int orderId)
     {
@@ -117,7 +119,7 @@ public class CacheDecorator(IOrderService inner) : IOrderService
             return cachedOrder;
 
         var order = await inner.GetOrderAsync(orderId);
-        _cache[orderId] = order;
+        _cache.TryAdd(orderId, order);
         return order;
     }
 }
