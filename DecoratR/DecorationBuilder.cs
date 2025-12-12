@@ -99,7 +99,6 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
                 ".");
 
         ValidateDecoratorChain();
-        ValidateBaseImplementation();
 
         var baseImplementation = _decorators.Last();
         var wrapperDecorators = _decorators.Take(_decorators.Count - 1).ToList();
@@ -198,77 +197,6 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     }
 
     /// <summary>
-    /// Validates that the base implementation (last decorator) is properly configured.
-    /// </summary>
-    private void ValidateBaseImplementation()
-    {
-        var baseImplementation = _decorators.Last();
-        
-        // For factory-based base implementations, we can't easily validate without actually calling the factory
-        // The validation will happen at runtime in BuildDecoratorChain with proper error handling
-        if (!baseImplementation.IsTypeDescriptor)
-        {
-            // Add a note to the developer about potential issues
-            // This is primarily for documentation/awareness - the real protection is in BuildDecoratorChain
-            return;
-        }
-        
-        // For type-based base implementations, ensure they don't require an inner service parameter
-        var baseType = baseImplementation.DecoratorType!;
-        var constructors = baseType.GetConstructors();
-        
-        // Check if any constructor has the service type in ANY parameter position (which would be wrong for base implementation)
-        var problematicConstructor = constructors.FirstOrDefault(ctor =>
-        {
-            var parameters = ctor.GetParameters();
-            return parameters.Any(p => p.ParameterType == typeof(TService));
-        });
-        
-        if (problematicConstructor != null)
-        {
-            var serviceParam = problematicConstructor.GetParameters().First(p => p.ParameterType == typeof(TService));
-            var paramPosition = Array.IndexOf(problematicConstructor.GetParameters(), serviceParam) + 1;
-            
-            throw new InvalidOperationException(
-                $"Base implementation {baseType.Name} should not have a constructor parameter of type {typeof(TService).Name} " +
-                $"(found at position {paramPosition}). Base implementations are the final service in the decorator chain " +
-                "and should not depend on an inner service. If you need to wrap another service, " +
-                "consider making it a decorator instead of the base implementation.");
-        }
-    }
-
-    /// <summary>
-    /// Creates a base implementation using a factory method with validation.
-    /// Ensures the factory doesn't incorrectly depend on the inner service parameter.
-    /// </summary>
-    /// <param name="provider">The service provider.</param>
-    /// <param name="baseImplementation">The factory-based base implementation descriptor.</param>
-    /// <returns>The created base implementation instance.</returns>
-    private object CreateBaseImplementationFromFactory(IServiceProvider provider, DecoratorDescriptor baseImplementation)
-    {
-        // For factory-based base implementations, we need to handle the fact that there's no inner service
-        // We'll call the factory with null inner service, but catch any exceptions that indicate improper usage
-        try
-        {
-            return baseImplementation.Factory!(provider, default!);
-        }
-        catch (ArgumentNullException)
-        {
-            throw new InvalidOperationException(
-                $"Base implementation factory for {typeof(TService).Name} should not depend on the inner service parameter. " +
-                "Base implementations are the final service in the decorator chain and the inner service parameter will always be null. " +
-                "Consider using a type-based registration instead: .Then<YourImplementation>()");
-        }
-        catch (NullReferenceException)
-        {
-            throw new InvalidOperationException(
-                $"Base implementation factory for {typeof(TService).Name} should not use the inner service parameter. " +
-                "Base implementations are the final service in the decorator chain and the inner service parameter will always be null. " +
-                "Consider using a type-based registration instead: .Then<YourImplementation>()");
-        }
-    }
-
-    /// <summary>
     /// Validates that a decorator doesn't have constructor dependencies that could create circular references.
     /// </summary>
     private void ValidateDecoratorDependencies(Type decoratorType)
@@ -326,16 +254,9 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
     {
         try
         {
-            object current;
-            
-            if (baseImplementation.IsTypeDescriptor)
-            {
-                current = ActivatorUtilities.GetServiceOrCreateInstance(provider, baseImplementation.DecoratorType!);
-            }
-            else
-            {
-                current = CreateBaseImplementationFromFactory(provider, baseImplementation);
-            }
+            object current = baseImplementation.IsTypeDescriptor
+                ? ActivatorUtilities.GetServiceOrCreateInstance(provider, baseImplementation.DecoratorType!)
+                : baseImplementation.Factory!(provider, default!); // Base implementation factory won't use inner service
 
             foreach (var decorator in Enumerable.Reverse(decorators))
             {
@@ -345,11 +266,6 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
             }
 
             return current;
-        }
-        catch (InvalidOperationException)
-        {
-            // Re-throw our specific exceptions as-is
-            throw;
         }
         catch (Exception ex)
         {
