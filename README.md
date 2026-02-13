@@ -146,6 +146,17 @@ services.Decorate<IOrderService>()
         .Apply();
 ```
 
+You can also conditionally skip an entire decoration chain using `ApplyIf`:
+
+```csharp
+// Only register the service if the feature is enabled
+services.Decorate<IOrderService>()
+        .With<LoggingDecorator>()
+        .Then<CacheDecorator>()
+        .Then<OrderService>()
+        .ApplyIf(featureFlags.OrderServiceEnabled);
+```
+
 ## Keyed Services
 
 **Note**: Keyed services require .NET 8.0 or later. This feature is not available when targeting .NET 6.0 or 7.0.
@@ -416,6 +427,7 @@ public void LoggingDecorator_ShouldLogExecution()
 - `AsScoped()` - Set lifetime to Scoped
 - `AsTransient()` - Set lifetime to Transient
 - `Apply()` - Apply the decoration configuration
+- `ApplyIf(bool condition)` - Conditionally apply the entire decoration chain
 
 ## Requirements
 
