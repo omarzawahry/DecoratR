@@ -103,4 +103,11 @@ public interface IDecorationBuilder<TService>
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when no decorators have been configured.</exception>
     void Apply();
+
+    /// <summary>
+    /// Conditionally applies the decorator configuration to the service collection.
+    /// If the condition is false, the entire decoration chain is skipped.
+    /// </summary>
+    /// <param name="condition">The condition that determines whether to apply the decoration chain.</param>
+    void ApplyIf(bool condition);
 }
