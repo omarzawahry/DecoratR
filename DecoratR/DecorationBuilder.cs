@@ -119,6 +119,14 @@ internal sealed class DecorationBuilder<TService> : IDecorationBuilder<TService>
         }
     }
 
+    public void ApplyIf(bool condition)
+    {
+        if (condition)
+        {
+            Apply();
+        }
+    }
+
 #if NET8_0_OR_GREATER
     private void RemoveExistingKeyedService()
     {

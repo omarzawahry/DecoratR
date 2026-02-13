@@ -304,4 +304,49 @@ public class DecoratorTests
         Assert.That(ex.Message, Contains.Substring("InvalidDecorator"));
         Assert.That(ex.Message, Contains.Substring("constructor"));
     }
+
+    [Test]
+    public void ApplyIf_WithTrueCondition_RegistersService()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .With<LoggingDecorator>()
+                .Then<BaseService>()
+                .ApplyIf(true);
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetService<IService>();
+
+        Assert.That(service, Is.Not.Null);
+        Assert.That(service!.Execute(), Is.EqualTo("Log(Base)"));
+    }
+
+    [Test]
+    public void ApplyIf_WithFalseCondition_DoesNotRegisterService()
+    {
+        var services = new ServiceCollection();
+
+        services.Decorate<IService>()
+                .With<LoggingDecorator>()
+                .Then<BaseService>()
+                .ApplyIf(false);
+
+        var provider = services.BuildServiceProvider();
+        var service = provider.GetService<IService>();
+
+        Assert.That(service, Is.Null);
+    }
+
+    [Test]
+    public void ApplyIf_WithFalseCondition_DoesNotThrow_WhenNoDecoratorsConfigured()
+    {
+        var services = new ServiceCollection();
+
+        Assert.DoesNotThrow(() =>
+        {
+            services.Decorate<IService>()
+                    .ApplyIf(false);
+        });
+    }
 }
