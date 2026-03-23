@@ -55,7 +55,7 @@ services.Decorate<IUserService>()
         .Apply();
 
 var provider = services.BuildServiceProvider();
-var userService = provider.GetService<IUserService>();
+var userService = provider.GetRequiredService<IUserService>();
 // Result: LoggingDecorator -> CacheDecorator -> UserService
 ```
 
@@ -346,34 +346,34 @@ services.Decorate<IService>()
 Decorator chains can be tested in isolation by pre-defining the chain outside the test (e.g. in a shared registration helper), then importing and applying it against a lightweight test service collection:
 
 ```csharp
-public interface IOrderService
+public interface IProductService
 {
     string Process();
 }
 
-public class OrderService : IOrderService
+public class ProductService : IProductService
 {
-    public string Process() => "OrderService";
+    public string Process() => "ProductService";
 }
 
-public class CachingDecorator(IOrderService inner) : IOrderService
+public class CachingDecorator(IProductService inner) : IProductService
 {
     public string Process() => $"Caching({inner.Process()})";
 }
 
-public class LoggingDecorator(IOrderService inner) : IOrderService
+public class LoggingDecorator(IProductService inner) : IProductService
 {
     public string Process() => $"Logging({inner.Process()})";
 }
 
 // Shared registration helper — defined once, reused across tests and production setup
-public static class OrderServiceRegistration
+public static class ProductServiceRegistration
 {
-    public static IDecorationBuilder<IOrderService> GetChain(IServiceCollection services) =>
-        services.Decorate<IOrderService>()
+    public static IDecorationBuilder<IProductService> GetChain(IServiceCollection services) =>
+        services.Decorate<IProductService>()
                 .With<LoggingDecorator>()
                 .Then<CachingDecorator>()
-                .Then<OrderService>();
+                .Then<ProductService>();
 }
 
 // Test
@@ -382,15 +382,15 @@ public void DecoratorChain_CanBeTestedInIsolation()
 {
     // Arrange - import the pre-defined chain and apply it to a test service collection
     var services = new ServiceCollection();
-    OrderServiceRegistration.GetChain(services).Apply();
+    ProductServiceRegistration.GetChain(services).Apply();
 
     var provider = services.BuildServiceProvider();
 
     // Act
-    var result = provider.GetRequiredService<IOrderService>().Process();
+    var result = provider.GetRequiredService<IProductService>().Process();
 
     // Assert - verify the full chain executes in the correct order
-    Assert.That(result, Is.EqualTo("Logging(Caching(OrderService))"));
+    Assert.That(result, Is.EqualTo("Logging(Caching(ProductService))"));
 }
 ```
 
@@ -406,9 +406,11 @@ public void DecoratorChain_CanBeTestedInIsolation()
 - `Then<TDecorator>()` - Add a decorator to the chain
 - `With<TDecorator>()` - Alias for `Then<TDecorator>()`
 - `Then(Func<IServiceProvider, TService, TService> factory)` - Add decorator via factory
+- `With(Func<IServiceProvider, TService, TService> factory)` - Alias for `Then(factory)`
 - `ThenIf<TDecorator>(bool condition)` - Conditionally add decorator
 - `WithIf<TDecorator>(bool condition)` - Alias for `ThenIf<TDecorator>(bool condition)`
 - `ThenIf(bool condition, Func<IServiceProvider, TService, TService> factory)` - Conditionally add decorator via factory
+- `WithIf(bool condition, Func<IServiceProvider, TService, TService> factory)` - Alias for `ThenIf(condition, factory)`
 - `WithLifetime(ServiceLifetime lifetime)` - Set service lifetime
 - `AsSingleton()` - Set lifetime to Singleton
 - `AsScoped()` - Set lifetime to Scoped
@@ -419,7 +421,6 @@ public void DecoratorChain_CanBeTestedInIsolation()
 ## Requirements
 
 - .NET 6.0 or later
-- Microsoft.Extensions.DependencyInjection 6.0.0 or later
 
 **Note**: Keyed services are only available in .NET 8.0 or later. If you're using .NET 6.0 or 7.0, you can only use the regular (non-keyed) decoration features.
 
