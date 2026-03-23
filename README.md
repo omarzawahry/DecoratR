@@ -20,7 +20,6 @@ Intuitive .NET library for implementing the Decorator pattern with Microsoft's D
   - [Complex Keys](#complex-keys)
 - [Custom Factory Methods](#custom-factory-methods)
   - [Advanced Factory Examples](#advanced-factory-examples)
-- [Generic Decorators](#generic-decorators)
 - [Lifetime Management](#lifetime-management)
 - [Best Practices](#best-practices)
   - [1. Decorator Ordering](#1-decorator-ordering)
@@ -56,7 +55,7 @@ services.Decorate<IUserService>()
         .Apply();
 
 var provider = services.BuildServiceProvider();
-var userService = provider.GetService<IUserService>();
+var userService = provider.GetRequiredService<IUserService>();
 // Result: LoggingDecorator -> CacheDecorator -> UserService
 ```
 
@@ -253,49 +252,6 @@ services.Decorate<IOrderService>()
         .Apply();
 ```
 
-## Generic Decorators
-
-DecoratR supports generic decorators with multiple type parameters:
-
-```csharp
-// Generic decorator with one type parameter
-public class CacheDecorator<T>(IService<T> inner) : IService<T>
-{
-    private static readonly Dictionary<string, T> _cache = new();
-
-    public async Task<T> GetAsync(string key)
-    {
-        if (_cache.TryGetValue(key, out var cachedValue))
-            return cachedValue;
-
-        var value = await inner.GetAsync(key);
-        _cache[key] = value;
-        return value;
-    }
-}
-
-// Multiple generic parameters
-public class TransformDecorator<TInput, TOutput>(ITransformService<TInput, TOutput> inner) 
-    : ITransformService<TInput, TOutput>
-{
-    public async Task<TOutput> TransformAsync(TInput input)
-    {
-        Console.WriteLine($"Transforming {typeof(TInput).Name} to {typeof(TOutput).Name}");
-        return await inner.TransformAsync(input);
-    }
-}
-
-// Configuration
-services.Decorate<IService<string>>()
-        .With<CacheDecorator<string>>()
-        .Then<StringService>()
-        .Apply();
-
-services.Decorate<ITransformService<User, UserDto>>()
-        .With<TransformDecorator<User, UserDto>>()
-        .Then<UserTransformService>()
-        .Apply();
-```
 
 ## Lifetime Management
 
@@ -387,23 +343,54 @@ services.Decorate<IService>()
 
 ### 4. Testing
 
-Decorators are easy to test in isolation:
+Decorator chains can be tested in isolation by pre-defining the chain outside the test (e.g. in a shared registration helper), then importing and applying it against a lightweight test service collection:
 
 ```csharp
-[Test]
-public void LoggingDecorator_ShouldLogExecution()
+public interface IProductService
 {
-    // Arrange
-    var mockInner = new Mock<IService>();
-    var mockLogger = new Mock<ILogger<LoggingDecorator>>();
-    var decorator = new LoggingDecorator(mockInner.Object, mockLogger.Object);
+    string Process();
+}
+
+public class ProductService : IProductService
+{
+    public string Process() => "ProductService";
+}
+
+public class CachingDecorator(IProductService inner) : IProductService
+{
+    public string Process() => $"Caching({inner.Process()})";
+}
+
+public class LoggingDecorator(IProductService inner) : IProductService
+{
+    public string Process() => $"Logging({inner.Process()})";
+}
+
+// Shared registration helper — defined once, reused across tests and production setup
+public static class ProductServiceRegistration
+{
+    public static IDecorationBuilder<IProductService> GetChain(IServiceCollection services) =>
+        services.Decorate<IProductService>()
+                .With<LoggingDecorator>()
+                .Then<CachingDecorator>()
+                .Then<ProductService>();
+}
+
+// Test
+[Test]
+public void DecoratorChain_CanBeTestedInIsolation()
+{
+    // Arrange - import the pre-defined chain and apply it to a test service collection
+    var services = new ServiceCollection();
+    ProductServiceRegistration.GetChain(services).Apply();
+
+    var provider = services.BuildServiceProvider();
 
     // Act
-    decorator.Execute();
+    var result = provider.GetRequiredService<IProductService>().Process();
 
-    // Assert
-    mockLogger.Verify(x => x.LogInformation(It.IsAny<string>()), Times.Once);
-    mockInner.Verify(x => x.Execute(), Times.Once);
+    // Assert - verify the full chain executes in the correct order
+    Assert.That(result, Is.EqualTo("Logging(Caching(ProductService))"));
 }
 ```
 
@@ -419,9 +406,11 @@ public void LoggingDecorator_ShouldLogExecution()
 - `Then<TDecorator>()` - Add a decorator to the chain
 - `With<TDecorator>()` - Alias for `Then<TDecorator>()`
 - `Then(Func<IServiceProvider, TService, TService> factory)` - Add decorator via factory
+- `With(Func<IServiceProvider, TService, TService> factory)` - Alias for `Then(factory)`
 - `ThenIf<TDecorator>(bool condition)` - Conditionally add decorator
 - `WithIf<TDecorator>(bool condition)` - Alias for `ThenIf<TDecorator>(bool condition)`
 - `ThenIf(bool condition, Func<IServiceProvider, TService, TService> factory)` - Conditionally add decorator via factory
+- `WithIf(bool condition, Func<IServiceProvider, TService, TService> factory)` - Alias for `ThenIf(condition, factory)`
 - `WithLifetime(ServiceLifetime lifetime)` - Set service lifetime
 - `AsSingleton()` - Set lifetime to Singleton
 - `AsScoped()` - Set lifetime to Scoped
@@ -432,7 +421,6 @@ public void LoggingDecorator_ShouldLogExecution()
 ## Requirements
 
 - .NET 6.0 or later
-- Microsoft.Extensions.DependencyInjection 6.0.0 or later
 
 **Note**: Keyed services are only available in .NET 8.0 or later. If you're using .NET 6.0 or 7.0, you can only use the regular (non-keyed) decoration features.
 
