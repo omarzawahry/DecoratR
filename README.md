@@ -255,6 +255,8 @@ services.Decorate<IOrderService>()
 
 ## Lifetime Management
 
+If no lifetime is specified, the default is `ServiceLifetime.Transient`.
+
 Control the lifetime of your decorated services:
 
 ```csharp
@@ -414,7 +416,7 @@ public void DecoratorChain_CanBeTestedInIsolation()
 - `WithLifetime(ServiceLifetime lifetime)` - Set service lifetime
 - `AsSingleton()` - Set lifetime to Singleton
 - `AsScoped()` - Set lifetime to Scoped
-- `AsTransient()` - Set lifetime to Transient
+- `AsTransient()` - Set lifetime to Transient (default if not specified)
 - `Apply()` - Apply the decoration configuration
 - `ApplyIf(bool condition)` - Conditionally apply the entire decoration chain
 
